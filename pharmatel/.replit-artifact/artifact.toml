@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "PharmaTel"
+version = "1.0.0"
+id = "artifacts/pharmatel"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+localPort = 25161
+name = "expo"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/pharmatel run dev"
+
+[services.env]
+PORT = "25161"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/pharmatel", "run", "build"]
+run = ["pnpm", "--filter", "@workspace/pharmatel", "run", "serve"]
