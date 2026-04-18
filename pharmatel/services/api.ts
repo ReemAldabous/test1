@@ -1,5 +1,4 @@
-const DEFAULT_API_BASE_URL = "http://10.136.243.234:8080/api"
-
+const DEFAULT_API_BASE_URL = "http://10.136.243.234:8080/api";
 
 export function getApiBaseUrl(): string {
   const envBaseUrl =

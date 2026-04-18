@@ -56,6 +56,26 @@ function groupByDate(entries: DiaryEntry[]): Map<string, DiaryEntry[]> {
   return map;
 }
 
+function parseMoodValue(value: string | number | boolean): number | undefined {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (!normalized) return undefined;
+
+  const numeric = Number.parseInt(normalized, 10);
+  if (Number.isFinite(numeric) && MOOD_LABELS[numeric]) {
+    return numeric;
+  }
+
+  const match = Object.entries(MOOD_LABELS).find(
+    ([, mood]) => mood.label.trim().toLowerCase() === normalized,
+  );
+
+  return match ? Number(match[0]) : undefined;
+}
+
 function mapObservationSessionsToDiaryEntries(
   sessions: ObservationSession[],
 ): DiaryEntry[] {
@@ -82,21 +102,52 @@ function mapObservationSessionsToDiaryEntries(
           ).padStart(2, "0")}`
         : "00:00";
 
-      return {
-        id: session.id,
-        patientId: "",
-        date,
-        time,
-        metrics: session.observations.map((observation) => ({
+      const metrics: DiaryEntry["metrics"] = [];
+      let mood: DiaryEntry["mood"];
+      const notes: string[] = [];
+
+      for (const observation of session.observations) {
+        const name = observation.symptomDefinition.name.trim().toLowerCase();
+        const type = observation.symptomDefinitionId.trim().toLowerCase();
+
+        if (type === "mood" || name === "mood") {
+          const parsedMood = parseMoodValue(observation.value);
+          if (parsedMood !== undefined) {
+            mood = parsedMood;
+          }
+          continue;
+        }
+
+        if (
+          type === "general_notes" ||
+          name === "general notes" ||
+          name === "notes"
+        ) {
+          const noteValue = String(observation.value ?? "").trim();
+          if (noteValue) {
+            notes.push(noteValue);
+          }
+          continue;
+        }
+
+        metrics.push({
           id: observation.id,
           type: observation.symptomDefinitionId,
           label: observation.symptomDefinition.name,
           value: normalizeMetricValue(observation.value),
           unit: observation.symptomDefinition.unit ?? "",
           icon: "activity",
-        })),
-        generalNotes: undefined,
-        mood: undefined,
+        });
+      }
+
+      return {
+        id: session.id,
+        patientId: "",
+        date,
+        time,
+        metrics,
+        generalNotes: notes.length > 0 ? notes.join("\n") : undefined,
+        mood,
         createdAt: at,
       } satisfies DiaryEntry;
     })
